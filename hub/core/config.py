@@ -24,7 +24,7 @@ DEFAULTS = {
     "conflict_resolution_policy": "BRANCH_BOTH",
     "lan_node_doc_ip": "10.65.1.53",
     "lan_node_media_ip": "192.168.0.167",
-    "lan_node_movie_ip": "192.168.0.14",
+    "lan_node_movie_ip": "192.168.0.69",
 }
 
 

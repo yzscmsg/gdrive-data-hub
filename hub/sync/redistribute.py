@@ -19,7 +19,7 @@ class RedistributionPlanner:
         """
         doc_ip = self.db.get_config("lan_node_doc_ip", "10.65.1.53")
         media_ip = self.db.get_config("lan_node_media_ip", "192.168.0.167")
-        movie_ip = self.db.get_config("lan_node_movie_ip", "192.168.0.14")
+        movie_ip = self.db.get_config("lan_node_movie_ip", "192.168.0.69")
 
         with self.db.connection() as conn:
             # Fetch files that are in cloud or external source but missing on their target LAN role
@@ -68,8 +68,8 @@ class RedistributionPlanner:
                         "size_bytes": f["size_bytes"],
                     })
 
-                # Rule 3: Movies belong on Cinema Vault
-                elif category == "movie" and "LAN_TRUENAS_014" not in origins:
+                # Rule 3: Movies belong on Cinema Vault (192.168.0.69)
+                elif category == "movie" and "LAN_TRUENAS_069" not in origins:
                     movie_tasks.append({
                         "file_id": fid,
                         "file_name": f["file_name"],

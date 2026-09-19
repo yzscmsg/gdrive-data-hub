@@ -18,4 +18,4 @@ INSERT OR REPLACE INTO system_config (config_key, config_value, value_type, desc
 ('conflict_resolution_policy', 'BRANCH_BOTH', 'string', 'Default action on concurrent edit conflict: BRANCH_BOTH, ACCEPT_LAN, ACCEPT_CLOUD'),
 ('lan_node_doc_ip', '10.65.1.53', 'string', 'IP of designated LAN Document NAS (Synology DS220+)'),
 ('lan_node_media_ip', '192.168.0.167', 'string', 'IP of designated LAN Media NAS (TrueNAS Photos & Music)'),
-('lan_node_movie_ip', '192.168.0.14', 'string', 'IP of designated LAN Cinema Vault (TrueNAS bulk movies)');
+('lan_node_movie_ip', '192.168.0.69', 'string', 'IP of designated LAN Cinema Vault (TrueNAS nas-tn-069, replacing inactive .014)');

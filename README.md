@@ -36,12 +36,12 @@
  │ (Routine Ingest Flow ▲)       │                               │ (Weekly Redistribution ▼)
  ▼                               ▼                               ▼
 ┌─────────────────────────────────┐   ┌─────────────────────────────────┐   ┌─────────────────────────────────┐
-│     LAN Node 1: DOC NAS         │   │     LAN Node 2: MEDIA NAS       │   │    LAN Node 3: MOVIE VAULT      │
-│ (Synology DS220+ / RAID1 Btrfs) │   │ (TrueNAS Bare-metal e.g. .167)  │   │  (TrueNAS Mass Storage e.g. .014│
+│     LAN Node 1: DOC NAS         │   │     LAN Node 2: MEDIA NAS       │   │    LAN Node 3: CINEMA VAULT     │
+│ (Synology DS220+ / RAID1 Btrfs) │   │ (TrueNAS Bare-metal e.g. .167)  │   │ (TrueNAS Bare-metal .069)       │
 │                                 │   │                                 │   │                                 │
 │ - T1 Business & Finance         │   │ - Curated Photos (LAN + iCloud) │   │ - Bulk Cinema Library (>2.4 TB) │
 │ - LifeOS Personal & Evidence    │   │ - Music & Audio Libraries       │   │ - Raw Video Dumps & Torrents    │
-│ - Project Repositories & Code   │   │ - Personal & Family Home Videos │   │ - Low-priority / Unranked Films │
+│ - Project Repositories & Code   │   │ - Personal & Family Home Videos │   │ - Active replacement for .014   │
 │ - Dropbox Ingested Docs         │   │                                 │   │                                 │
 └─────────────────────────────────┘   └─────────────────────────────────┘   └─────────────────────────────────┘
 ```
@@ -50,7 +50,7 @@
 2. **Specialized LAN NAS Roles**:
    - **Document NAS** (`10.65.1.53`, Synology DS220+ RAID1): Authoritative home for business documents, LifeOS evidence, and code repositories.
    - **Media NAS** (`192.168.0.167`, TrueNAS): Authoritative home for curated photos, music, and home videos.
-   - **Cinema Vault** (`192.168.0.14`, TrueNAS): Local bulk storage for entire movie library (>2.4 TB).
+   - **Cinema & Bulk Vault** (`192.168.0.69`, TrueNAS bare-metal `nas-tn-069`): Local bulk storage for cinema library (>2.4 TB) and download staging (active replacement for offline `.014`).
 3. **IMDb-Curated Cinema Tiering**:
    - Only films with IMDb rating $\ge 7.8$, Top 250 classics, or tagged "Favorites" sync to Google Drive (~400–600 GB). All bulk movies stay on the local Cinema Vault.
 4. **Bidirectional Sync with Version Branching**:

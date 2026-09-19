@@ -45,12 +45,12 @@ Rather than treating the cloud transition as a one-off "lift-and-shift" migratio
  │ (Routine Ingest Flow ▲)       │                               │ (Weekly Redistribution ▼)
  ▼                               ▼                               ▼
 ┌─────────────────────────────────┐   ┌─────────────────────────────────┐   ┌─────────────────────────────────┐
-│     LAN Node 1: DOC NAS         │   │     LAN Node 2: MEDIA NAS       │   │    LAN Node 3: MOVIE VAULT      │
-│ (Synology DS220+ / RAID1 Btrfs) │   │ (TrueNAS Bare-metal e.g. .167)  │   │  (TrueNAS Mass Storage e.g. .014│
+│     LAN Node 1: DOC NAS         │   │     LAN Node 2: MEDIA NAS       │   │    LAN Node 3: CINEMA VAULT     │
+│ (Synology DS220+ / RAID1 Btrfs) │   │ (TrueNAS Bare-metal e.g. .167)  │   │ (TrueNAS Bare-metal .069)       │
 │                                 │   │                                 │   │                                 │
 │ - T1 Business & Finance         │   │ - Curated Photos (LAN + iCloud) │   │ - Bulk Cinema Library (>2.4 TB) │
 │ - LifeOS Personal & Evidence    │   │ - Music & Audio Libraries       │   │ - Raw Video Dumps & Torrents    │
-│ - Project Repositories & Code   │   │ - Personal & Family Home Videos │   │ - Low-priority / Unranked Films │
+│ - Project Repositories & Code   │   │ - Personal & Family Home Videos │   │ - Replaces offline .014 node    │
 │ - Dropbox Ingested Docs         │   │                                 │   │                                 │
 └─────────────────────────────────┘   └─────────────────────────────────┘   └─────────────────────────────────┘
 ```
