@@ -81,9 +81,26 @@ def make_handler(db: Database):
 
 def run_portal(db: Database, host: str = "0.0.0.0", port: int = 8080) -> None:
     handler = make_handler(db)
-    with socketserver.TCPServer((host, port), handler) as httpd:
-        print(f"[+] Data Hub Management Portal is live at http://localhost:{port}")
+    socketserver.TCPServer.allow_reuse_address = True
+
+    current_port = port
+    max_attempts = 10
+
+    for attempt in range(max_attempts):
         try:
-            httpd.serve_forever()
-        except KeyboardInterrupt:
-            print("\n[*] Stopping portal server.")
+            with socketserver.TCPServer((host, current_port), handler) as httpd:
+                if current_port != port:
+                    print(f"[!] Port {port} was already in use. Switched to available port {current_port}.")
+                print(f"[+] Data Hub Management Portal is live at http://localhost:{current_port} (and http://127.0.0.1:{current_port})")
+                try:
+                    httpd.serve_forever()
+                except KeyboardInterrupt:
+                    print("\n[*] Stopping portal server.")
+                return
+        except OSError as e:
+            if getattr(e, "winerror", None) == 10048 or getattr(e, "errno", None) in (48, 98):
+                current_port += 1
+                continue
+            raise
+
+    print(f"[X] Could not find an available port in range {port} - {current_port - 1}.")
