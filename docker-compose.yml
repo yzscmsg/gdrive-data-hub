@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  gdrive-hub:
+    build: .
+    container_name: gdrive-data-hub
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - nas_doc_mount:/mnt/nas_doc:ro
+      - nas_media_mount:/mnt/nas_media
+      - nas_movie_mount:/mnt/nas_movie:ro
+      - ~/.config/rclone:/root/.config/rclone:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PORTAL_PORT=8080
+
+volumes:
+  nas_doc_mount:
+  nas_media_mount:
+  nas_movie_mount:
