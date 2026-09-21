@@ -79,9 +79,57 @@ class RedistributionPlanner:
                         "size_bytes": f["size_bytes"],
                     })
 
+            # Rule 4: TrueNAS 167 Satellite Edge Cache (Office B fast workspace)
+            # Replicates:
+            #   a) Active business/knowledge documents with lifecycle = 'fresh' (<180d)
+            #   b) Curated operational tools/utilities (software category)
+            # Main authoritative station remains Synology DS220+ (10.65.1.53)
+            edge_tasks: List[Dict[str, Any]] = []
+            edge_enabled = self.db.get_config("edge_167_cache_enabled", True)
+            if edge_enabled:
+                edge_include_tools = self.db.get_config("edge_167_include_tools", True)
+                edge_quota_bytes = self.db.get_config("edge_167_max_quota_gb", 50) * (1024**3)
+                current_edge_bytes = 0
+
+                fresh_candidates = conn.execute(
+                    """
+                    SELECT f.file_id, f.file_name, f.canonical_gdrive_path, f.category, f.domain, f.size_bytes, l.status
+                    FROM files f
+                    JOIN lifecycle l ON f.file_id = l.file_id
+                    WHERE (
+                        (f.domain IN ('business', 'knowledge') AND l.status = 'fresh')
+                        OR (? AND f.domain = 'software' AND f.category IN ('software', 'doc'))
+                    )
+                    ORDER BY f.modified_at DESC
+                    """,
+                    (1 if edge_include_tools else 0,),
+                ).fetchall()
+
+                for f in fresh_candidates:
+                    fid = f["file_id"]
+                    instances = conn.execute(
+                        "SELECT source_origin FROM source_instances WHERE file_id = ?",
+                        (fid,),
+                    ).fetchall()
+                    origins = {inst["source_origin"] for inst in instances}
+
+                    if "LAN_TRUENAS_167_CACHE" not in origins:
+                        if current_edge_bytes + f["size_bytes"] <= edge_quota_bytes:
+                            edge_tasks.append({
+                                "file_id": fid,
+                                "file_name": f["file_name"],
+                                "gdrive_path": f["canonical_gdrive_path"],
+                                "target_node": media_ip,
+                                "target_share": f"smb://{media_ip}/fast-workspace/{f['canonical_gdrive_path']}",
+                                "size_bytes": f["size_bytes"],
+                                "cache_reason": "Fresh Working Set (<180d)" if f["domain"] != "software" else "Curated Toolchain",
+                            })
+                            current_edge_bytes += f["size_bytes"]
+
             return {
-                "total_redistribution_tasks": len(doc_tasks) + len(media_tasks) + len(movie_tasks),
+                "total_redistribution_tasks": len(doc_tasks) + len(media_tasks) + len(movie_tasks) + len(edge_tasks),
                 "doc_nas_tasks": doc_tasks,
                 "media_nas_tasks": media_tasks,
                 "cinema_vault_tasks": movie_tasks,
+                "edge_167_cache_tasks": edge_tasks,
             }

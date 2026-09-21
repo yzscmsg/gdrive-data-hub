@@ -86,9 +86,10 @@ def main(argv=None) -> int:
         planner = RedistributionPlanner(db)
         plan = planner.generate_redistribution_plan()
         print(f"[+] Total redistribution tasks computed: {plan['total_redistribution_tasks']}")
-        print(f"    - Document NAS tasks: {len(plan['doc_nas_tasks'])}")
-        print(f"    - Media NAS tasks: {len(plan['media_nas_tasks'])}")
-        print(f"    - Cinema Vault tasks: {len(plan['cinema_vault_tasks'])}")
+        print(f"    - Document NAS tasks (Synology): {len(plan['doc_nas_tasks'])}")
+        print(f"    - Media NAS tasks (TrueNAS 167): {len(plan['media_nas_tasks'])}")
+        print(f"    - Cinema Vault tasks (TrueNAS 069): {len(plan['cinema_vault_tasks'])}")
+        print(f"    - TrueNAS 167 Satellite Edge Cache tasks: {len(plan.get('edge_167_cache_tasks', []))}")
         return 0
 
     elif args.command == "index":

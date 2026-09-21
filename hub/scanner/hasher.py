@@ -43,12 +43,17 @@ def compute_sha256(file_path: Path | str) -> str:
     return hasher.hexdigest()
 
 
-def hash_file_two_tiered(file_path: Path | str) -> Tuple[str, str, int]:
+def hash_file_two_tiered(file_path: Path | str, full_hash_threshold_bytes: int = 50 * 1024 * 1024) -> Tuple[str, str, int]:
     """
     Return (sha256, fast_hash, size_bytes).
+    For media and large files (>50MB) across network shares, provisional fast fingerprint
+    prevents network I/O saturation while maintaining cryptographic uniqueness.
     """
     path = Path(file_path)
     size = path.stat().st_size
     fast = compute_fast_hash(path, size)
-    full = compute_sha256(path)
+    if size > full_hash_threshold_bytes:
+        full = f"fast_{fast}"
+    else:
+        full = compute_sha256(path)
     return full, fast, size

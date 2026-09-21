@@ -18,4 +18,20 @@ INSERT OR REPLACE INTO system_config (config_key, config_value, value_type, desc
 ('conflict_resolution_policy', 'BRANCH_BOTH', 'string', 'Default action on concurrent edit conflict: BRANCH_BOTH, ACCEPT_LAN, ACCEPT_CLOUD'),
 ('lan_node_doc_ip', '10.65.1.53', 'string', 'IP of designated LAN Document NAS (Synology DS220+)'),
 ('lan_node_media_ip', '192.168.0.167', 'string', 'IP of designated LAN Media NAS (TrueNAS Photos & Music)'),
-('lan_node_movie_ip', '192.168.0.69', 'string', 'IP of designated LAN Cinema Vault (TrueNAS nas-tn-069, replacing inactive .014)');
+('lan_node_movie_ip', '192.168.0.69', 'string', 'IP of designated LAN Cinema Vault (TrueNAS nas-tn-069, replacing inactive .014)'),
+('edge_167_cache_enabled', 'true', 'bool', 'Enable Satellite Edge Cache on TrueNAS 167 for Office B fast access'),
+('edge_167_freshness_days', '180', 'int', 'Max age in days for active business documents to be cached on 167'),
+('edge_167_include_tools', 'true', 'bool', 'Mirror curated IT software tools & utilities to 167 edge workspace'),
+('edge_167_max_quota_gb', '50', 'int', 'Maximum disk quota in GB allocated to 167 edge workspace cache'),
+('inbox_auto_quarantine_days', '30', 'int', 'Days before unclaimed 00_Inbox files are moved to 07_Quarantine/Unsorted');
+
+-- 7 Root Folder Archetypes (Lean Solo-Operator Governance)
+INSERT OR REPLACE INTO folder_policies (folder_prefix, archetype, tier, authority_node, replica_target, rpo_hours, rto_hours, retention_days, sync_frequency, auto_quarantine_days, description) VALUES
+('00_Inbox', 'QUARANTINE', 'T2-temp', 'SHARED_DROPZONE', 'NONE', 24, 4, 30, 'HOURLY', 30, 'Temporary file dropzone with 30-day auto-quarantine triage'),
+('01_Business', 'ACTIVE_WORKSPACE', 'T1', 'SYNOLOGY_PRIMARY', 'TRUENAS_167_CACHE', 1, 1, 30, 'HOURLY', 0, 'Daily operational business, accounting, and corporate documents'),
+('02_Projects', 'PROJECT_WORKSPACE', 'T2', 'SYNOLOGY_PRIMARY', 'NONE', 24, 4, 90, 'DAILY', 0, 'Technical projects, development repositories, and specifications'),
+('03_Software', 'TOOLCHAIN_CURATED', 'T3', 'GDRIVE_CANONICAL', 'TRUENAS_167_CACHE', 168, 8, 365, 'WEEKLY', 0, 'Curated utilities, runtime installers, and diagnostic tools'),
+('04_Archive', 'COLD_ARCHIVE', 'T3', 'SYNOLOGY_PRIMARY', 'NONE', 720, 24, 3650, 'MONTHLY', 0, 'Permanent historical records and closed client files (read-only)'),
+('05_Media', 'MEDIA_VAULT', 'T2', 'TRUENAS_167', 'TRUENAS_069_VAULT', 168, 8, 365, 'WEEKLY', 0, 'Photos and music on 167; Movies on 069 with IMDb score filtering'),
+('06_Platform', 'PLATFORM_DATA', 'T1', 'LOCAL_ISOLATED', 'NONE', 24, 4, 30, 'DAILY', 0, 'App data, system configurations, and hypervisor backups');
+

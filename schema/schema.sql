@@ -134,6 +134,22 @@ CREATE TABLE IF NOT EXISTS system_config (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 11. Folder Archetype Governance Policies (Lean Solo-Operator Model)
+CREATE TABLE IF NOT EXISTS folder_policies (
+    policy_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    folder_prefix TEXT NOT NULL UNIQUE,          -- E.g. '01_Business', '00_Inbox', '04_Archive'
+    archetype TEXT NOT NULL,                     -- 'ACTIVE_WORKSPACE', 'PROJECT_WORKSPACE', 'TOOLCHAIN_CURATED', 'COLD_ARCHIVE', 'MEDIA_VAULT', 'PLATFORM_DATA', 'QUARANTINE'
+    tier TEXT NOT NULL,                          -- 'T1', 'T2', 'T3', 'T2-temp'
+    authority_node TEXT NOT NULL,                -- 'SYNOLOGY_PRIMARY', 'TRUENAS_167', 'TRUENAS_069', 'GDRIVE'
+    replica_target TEXT,                         -- 'TRUENAS_167_CACHE', 'NONE'
+    rpo_hours INTEGER DEFAULT 24,
+    rto_hours INTEGER DEFAULT 4,
+    retention_days INTEGER DEFAULT 30,
+    sync_frequency TEXT DEFAULT 'DAILY',
+    auto_quarantine_days INTEGER DEFAULT 0,      -- 30 for 00_Inbox, 0 for others
+    description TEXT
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_files_sha256 ON files(sha256);
 CREATE INDEX IF NOT EXISTS idx_files_fast_hash ON files(fast_hash);
@@ -145,3 +161,4 @@ CREATE INDEX IF NOT EXISTS idx_lifecycle_status ON lifecycle(status);
 CREATE INDEX IF NOT EXISTS idx_lineage_family ON version_lineage(family_name);
 CREATE INDEX IF NOT EXISTS idx_movie_imdb ON movie_curation(imdb_rating);
 CREATE INDEX IF NOT EXISTS idx_job_runs_started ON job_runs(started_at);
+CREATE INDEX IF NOT EXISTS idx_folder_policies_prefix ON folder_policies(folder_prefix);

@@ -36,48 +36,73 @@ class NASCrawler:
         ingested = 0
         total_bytes = 0
 
+        fresh_days = self.db.get_config("lifecycle_fresh_days", 180)
+        stale_days = self.db.get_config("lifecycle_stale_days", 365)
+
         try:
-            for item in base.rglob("*"):
-                if item.is_file() and not item.name.startswith((".", "~$", "@eaDir", "#recycle")):
-                    scanned += 1
-                    try:
-                        ext = item.suffix.lower()
-                        category = get_category_from_extension(ext)
-                        sha256, fast_hash, size = hash_file_two_tiered(item)
-                        total_bytes += size
+            with self.db.connection() as conn:
+                for item in base.rglob("*"):
+                    if item.is_file() and not item.name.startswith((".", "~$", "@eaDir", "#recycle")):
+                        scanned += 1
+                        try:
+                            ext = item.suffix.lower()
+                            category = get_category_from_extension(ext)
+                            sha256, fast_hash, size = hash_file_two_tiered(item)
+                            total_bytes += size
 
-                        rel_path = str(item.relative_to(base))
-                        domain = classify_domain(rel_path, item.name)
-                        canonical_path = build_canonical_gdrive_path(rel_path, item.name, domain, category)
+                            rel_path = str(item.relative_to(base))
+                            domain = classify_domain(rel_path, item.name)
+                            canonical_path = build_canonical_gdrive_path(rel_path, item.name, domain, category)
 
-                        file_id = self.db.register_file(
-                            sha256=sha256,
-                            fast_hash=fast_hash,
-                            file_name=item.name,
-                            file_extension=ext,
-                            canonical_gdrive_path=canonical_path,
-                            size_bytes=size,
-                            category=category,
-                            domain=domain,
-                        )
+                            cur = conn.execute(
+                                """
+                                INSERT INTO files (
+                                    sha256, fast_hash, file_name, file_extension, canonical_gdrive_path,
+                                    size_bytes, category, domain
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                ON CONFLICT(canonical_gdrive_path) DO UPDATE SET
+                                    sha256 = excluded.sha256,
+                                    fast_hash = excluded.fast_hash,
+                                    size_bytes = excluded.size_bytes
+                                RETURNING file_id
+                                """,
+                                (sha256, fast_hash, item.name, ext, canonical_path, size, category, domain),
+                            )
+                            file_id = cur.fetchone()["file_id"]
 
-                        self.db.add_source_instance(
-                            file_id=file_id,
-                            source_origin=source_origin,
-                            source_path=str(item),
-                            is_canonical_source=False,
-                        )
+                            conn.execute(
+                                """
+                                INSERT INTO source_instances (
+                                    file_id, source_origin, source_path, is_canonical_source, last_seen_at
+                                ) VALUES (?, ?, ?, 0, CURRENT_TIMESTAMP)
+                                """,
+                                (file_id, source_origin, str(item)),
+                            )
 
-                        mtime = item.stat().st_mtime
-                        mod_dt = datetime.fromtimestamp(mtime, tz=timezone.utc)
-                        fresh_days = self.db.get_config("lifecycle_fresh_days", 180)
-                        stale_days = self.db.get_config("lifecycle_stale_days", 365)
-                        status, reason = classify_lifecycle(mod_dt, domain, item.name, fresh_days, stale_days)
-                        self.db.set_lifecycle(file_id, status, reason)
+                            mtime = item.stat().st_mtime
+                            mod_dt = datetime.fromtimestamp(mtime, tz=timezone.utc)
+                            status, reason = classify_lifecycle(mod_dt, domain, item.name, fresh_days, stale_days)
+                            conn.execute(
+                                """
+                                INSERT INTO lifecycle (file_id, status, status_reason, last_validated_at)
+                                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                                ON CONFLICT(file_id) DO UPDATE SET
+                                    status = excluded.status,
+                                    status_reason = excluded.status_reason,
+                                    last_validated_at = CURRENT_TIMESTAMP
+                                """,
+                                (file_id, status, reason),
+                            )
+                            ingested += 1
 
-                        ingested += 1
-                    except Exception as e:
-                        self.db.log_error(run_id, str(item), "CRAWL_ERROR", str(e))
+                            if ingested % 100 == 0:
+                                conn.commit()
+                                print(f"    -> Ingested {ingested} files ({total_bytes / (1024**2):.1f} MB)...", flush=True)
+
+                        except Exception as e:
+                            self.db.log_error(run_id, str(item), "CRAWL_ERROR", str(e))
+
+                conn.commit()
 
             self.db.finish_job(
                 run_id, "SUCCESS", files_scanned=scanned, files_ingested=ingested,
