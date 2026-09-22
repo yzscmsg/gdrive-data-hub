@@ -10,6 +10,7 @@ from hub.core.database import Database
 from hub.scanner.hasher import hash_file_two_tiered
 from hub.classifier.rules import classify_domain, build_canonical_gdrive_path, classify_lifecycle
 from hub.classifier.taxonomy import get_category_from_extension
+from hub.media.imdb import parse_movie_title_and_year, fetch_movie_rating, evaluate_cloud_placement
 
 
 class NASCrawler:
@@ -52,7 +53,16 @@ class NASCrawler:
 
                             rel_path = str(item.relative_to(base))
                             domain = classify_domain(rel_path, item.name)
-                            canonical_path = build_canonical_gdrive_path(rel_path, item.name, domain, category)
+                            if domain == "media" and category in ("movie", "photo", "music"):
+                                rel_clean = rel_path.replace("\\", "/")
+                                if category == "movie":
+                                    canonical_path = f"06_MEDIA/Curated_Cinema/{rel_clean}"
+                                elif category == "photo":
+                                    canonical_path = f"06_MEDIA/Photos/{rel_clean}"
+                                else:
+                                    canonical_path = f"06_MEDIA/Music/{rel_clean}"
+                            else:
+                                canonical_path = build_canonical_gdrive_path(rel_path, item.name, domain, category)
 
                             cur = conn.execute(
                                 """
@@ -70,14 +80,24 @@ class NASCrawler:
                             )
                             file_id = cur.fetchone()["file_id"]
 
-                            conn.execute(
-                                """
-                                INSERT INTO source_instances (
-                                    file_id, source_origin, source_path, is_canonical_source, last_seen_at
-                                ) VALUES (?, ?, ?, 0, CURRENT_TIMESTAMP)
-                                """,
-                                (file_id, source_origin, str(item)),
-                            )
+                            existing_inst = conn.execute(
+                                "SELECT instance_id FROM source_instances WHERE source_origin = ? AND source_path = ?",
+                                (source_origin, str(item)),
+                            ).fetchone()
+                            if existing_inst:
+                                conn.execute(
+                                    "UPDATE source_instances SET file_id = ?, last_seen_at = CURRENT_TIMESTAMP WHERE instance_id = ?",
+                                    (file_id, existing_inst["instance_id"]),
+                                )
+                            else:
+                                conn.execute(
+                                    """
+                                    INSERT INTO source_instances (
+                                        file_id, source_origin, source_path, is_canonical_source, last_seen_at
+                                    ) VALUES (?, ?, ?, 0, CURRENT_TIMESTAMP)
+                                    """,
+                                    (file_id, source_origin, str(item)),
+                                )
 
                             mtime = item.stat().st_mtime
                             mod_dt = datetime.fromtimestamp(mtime, tz=timezone.utc)
@@ -93,6 +113,39 @@ class NASCrawler:
                                 """,
                                 (file_id, status, reason),
                             )
+
+                            if category == "movie":
+                                title, year = parse_movie_title_and_year(item.name)
+                                rating_data = fetch_movie_rating(title, year)
+                                tier, _ = evaluate_cloud_placement(rating_data.get("rating", 6.5), rating_data.get("votes", 1000))
+                                existing_movie = conn.execute(
+                                    "SELECT movie_id FROM movie_curation WHERE file_id = ?", (file_id,)
+                                ).fetchone()
+                                if existing_movie:
+                                    conn.execute(
+                                        """
+                                        UPDATE movie_curation SET
+                                            title = ?, release_year = ?, imdb_id = ?, imdb_rating = ?, imdb_votes = ?,
+                                            genres = ?, synopsis = ?, tier_location = ?
+                                        WHERE movie_id = ?
+                                        """,
+                                        (title, year, rating_data.get("imdb_id"), rating_data.get("rating", 6.5),
+                                         rating_data.get("votes", 1000), rating_data.get("genres", "Unknown"),
+                                         rating_data.get("synopsis", ""), tier, existing_movie["movie_id"]),
+                                    )
+                                else:
+                                    conn.execute(
+                                        """
+                                        INSERT INTO movie_curation (
+                                            file_id, title, release_year, imdb_id, imdb_rating, imdb_votes,
+                                            genres, synopsis, tier_location
+                                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                        """,
+                                        (file_id, title, year, rating_data.get("imdb_id"), rating_data.get("rating", 6.5),
+                                         rating_data.get("votes", 1000), rating_data.get("genres", "Unknown"),
+                                         rating_data.get("synopsis", ""), tier),
+                                    )
+
                             ingested += 1
 
                             if ingested % 100 == 0:
