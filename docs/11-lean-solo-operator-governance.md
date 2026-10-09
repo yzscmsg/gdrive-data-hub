@@ -54,3 +54,12 @@ Files inherit lifecycle, RPO, and replication rules based on the folder path pre
   2. The local edit is saved as `Filename_OfficeB_rev.ext` (or placed in `--backup-dir`).
   3. The conflict is recorded in `sync_conflicts` with `resolution = 'PENDING'`.
   4. The Management Portal (`http://localhost:8081`) displays a 1-click promotion button to merge back into Synology.
+
+---
+
+## 5. Structural Preservation Exemption (KZ & Kelly CorpSec)
+
+- **Rule**: Folders under `KZ` or `Kelly` relating to corporate secretarial operations (`CorpSec`, statutory registers, minutes books, resolutions, ACRA filings, and company secretarial documentation) are **exempt from generic classification and regrouping**.
+- **Rationale**: Corporate secretarial filings follow established legal and statutory naming conventions that must remain untouched to ensure regulatory compliance and client auditability.
+- **Implementation**: The engine carries forward the existing folder hierarchies under `01_Business/` verbatim, bypassing generic subfolder bucketing (`Operations_General` / `Accounting_Finance`).
+

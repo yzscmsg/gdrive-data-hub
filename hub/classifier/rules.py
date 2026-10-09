@@ -10,16 +10,40 @@ from typing import Optional, Tuple
 from hub.classifier.taxonomy import TAXONOMY_DOMAINS, get_category_from_extension
 
 
+def is_corpsec_exempt(path_str: str, file_name: str) -> bool:
+    """
+    Check if a path belongs to KZ or Kelly corporate secretarial (CorpSec) structure.
+    Under Lean Solo-Operator Governance, CorpSec folders carry their own mature
+    internal structure and are exempt from generic reclassification and regrouping.
+    """
+    normalized = f"{path_str}/{file_name}".lower().replace("\\", "/")
+    if any(k in normalized for k in ("corpsec", "corp sec", "corporate secretary")):
+        return True
+    is_kz_or_kelly = any(k in normalized for k in ("kz", "kelly"))
+    has_corpsec_indicator = any(k in normalized for k in (
+        "secretary", "sec", "minutes", "resolution", "statutory", "acra",
+        "incorporation", "directors", "shareholders", "annual return", "bizfile",
+        "agm", "egm", "take over", "officer", "statutory registers"
+    ))
+    return is_kz_or_kelly and has_corpsec_indicator
+
+
 def classify_domain(path_str: str, file_name: str) -> str:
     """Classify the target domain based on source path and file name heuristics."""
     normalized = f"{path_str}/{file_name}".lower().replace("\\", "/")
+
+    # 0. CorpSec Exemption: KZ / Kelly CorpSec structures remain strictly business
+    if is_corpsec_exempt(path_str, file_name):
+        return "business"
 
     # 1. Business / Corporate
     if any(k in normalized for k in ("account", "finance", "invoice", "payroll", "hr", "odoo", "tax", "erp", "sales-ops", "purchasing", "contracts")):
         return "business"
 
     # 2. LifeOS / Personal Family
-    if any(k in normalized for k in ("lifeos", "kelly", "family", "evidence", "medical", "passport", "household", "insurance")):
+    if any(k in normalized for k in ("lifeos", "family", "evidence", "medical", "passport", "household", "insurance")):
+        return "lifeos"
+    if "kelly" in normalized and not any(b in normalized for b in ("client", "company", "biz", "consult")):
         return "lifeos"
 
     # 3. Projects / Source Code
@@ -47,6 +71,14 @@ def classify_domain(path_str: str, file_name: str) -> str:
 
 def build_canonical_gdrive_path(source_path: str, file_name: str, domain: str, category: str) -> str:
     """Construct the standardized Google Drive destination path."""
+    clean_source = source_path.replace("\\", "/").strip("/")
+
+    # Exemption: KZ / Kelly CorpSec folders preserve their existing relative hierarchy
+    if is_corpsec_exempt(source_path, file_name):
+        if clean_source.startswith("01_BUSINESS") or clean_source.startswith("lCE2026"):
+            return f"{clean_source}/{file_name}"
+        return f"01_BUSINESS/{clean_source}/{file_name}"
+
     root_folder = TAXONOMY_DOMAINS.get(domain, "07_ARCHIVE")
 
     # Format clean subfolder
@@ -104,8 +136,17 @@ def classify_lifecycle(
     """
     lowered_name = file_name.lower()
 
-    # Obsolete checks
-    if any(k in lowered_name for k in (".tmp", "temp", "scratch", "corrupt", "old_v", "superseded", ".~tmp~")):
+    # Obsolete checks (precise tokens to avoid false positives on 'template' or 'corruption')
+    is_media = domain == "media" or lowered_name.endswith((".mp3", ".flac", ".wav", ".m4a", ".mp4", ".mkv", ".avi", ".mov"))
+    is_obsolete = (
+        lowered_name.endswith(".tmp")
+        or lowered_name.startswith("~$")
+        or ".~tmp~" in lowered_name
+        or "old_v" in lowered_name
+        or "superseded" in lowered_name
+        or (not is_media and any(k in lowered_name for k in ("temporary", "temp_", "_temp.", "scratch.")))
+    )
+    if is_obsolete:
         return "obsolete", "Temporary or explicitly superseded file"
 
     if modified_time is None:
@@ -118,7 +159,7 @@ def classify_lifecycle(
     age_days = (now - modified_time).days
 
     # Stable Golden Records
-    if any(k in lowered_name for k in ("contract", "agreement", "certificate", "adr-", "constitution", "final_signed", "tax_return")):
+    if any(k in lowered_name for k in ("contract", "agreement", "certificate", "adr-", "constitution", "final_signed", "tax_return", "template", "statutory", "resolution")):
         return "stable", "Permanent legal/contractual/architectural golden record"
 
     # Fresh

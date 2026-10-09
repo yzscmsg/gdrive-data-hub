@@ -4,10 +4,7 @@ __pycache__/
 *$py.class
 
 # Database and local instance data
-data/*.db
-data/*.db-wal
-data/*.db-shm
-data/*.json
+data/
 *.parquet
 
 # Environments & IDEs

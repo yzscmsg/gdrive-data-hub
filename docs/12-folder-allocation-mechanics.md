@@ -51,3 +51,13 @@ FROM folder_policies;
 ```
 
 When files are crawled, they are associated with their canonical root and lifecycle record.
+
+---
+
+## 4. CorpSec Structural Preservation (KZ & Kelly)
+
+* **Rule**: Folders under `KZ` or `Kelly` relating to corporate secretarial matters (`CorpSec`, `Doc/CorpSec`, `Doc/Kelly`, `01 Clients/.../Corp Sec`, minutes books, resolutions, statutory registers, and ACRA filings) are **strictly exempt from heuristic classification and regrouping**.
+* **Behavior**:
+  * Inherits domain `business` (never `lifeos`).
+  * Preserves original relative folder hierarchy verbatim under `01_Business/` without bucketing into generic subfolders.
+

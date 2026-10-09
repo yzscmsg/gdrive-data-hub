@@ -14,10 +14,18 @@ class TestClassifier(unittest.TestCase):
         self.assertEqual(classify_domain("Training/2020-JDA", "jda_manual.pdf"), "knowledge")
         self.assertEqual(classify_domain("WinInstall", "Win11_Pro.iso"), "software")
         self.assertEqual(classify_domain("Media/Movie", "Top Gun Maverick.mkv"), "media")
+        # KZ / Kelly CorpSec exemption tests
+        self.assertEqual(classify_domain("Doc/CorpSec/Acra", "Appt_Kelly.pdf"), "business")
+        self.assertEqual(classify_domain("Doc/Kelly/Company_Resolutions", "Director_Resolution.pdf"), "business")
+        self.assertEqual(classify_domain("KZ_CorpSec/ClientA/Statutory", "Minutes.pdf"), "business")
 
     def test_build_canonical_path(self):
         path = build_canonical_gdrive_path("Account/Invoices", "invoice_001.pdf", "business", "doc")
         self.assertEqual(path, "01_BUSINESS/Accounting_Finance/invoice_001.pdf")
+
+        # CorpSec folder structure preservation
+        corpsec_path = build_canonical_gdrive_path("Doc/CorpSec/ClientA/2026", "acra_bizfile.pdf", "business", "doc")
+        self.assertEqual(corpsec_path, "01_BUSINESS/Doc/CorpSec/ClientA/2026/acra_bizfile.pdf")
 
         photo_path = build_canonical_gdrive_path("Photos/2026/Summer", "IMG_001.HEIC", "media", "photo")
         self.assertEqual(photo_path, "06_MEDIA/Photos/IMG_001.HEIC")
